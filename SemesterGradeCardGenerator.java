@@ -35,6 +35,7 @@ public class SemesterGradeCardGenerator extends JFrame {
 
     private JTable subjectTable;
     private DefaultTableModel tableModel;
+    private int editingSubjectRow = -1;
 
     private JLabel selectedStudentLabel;
     private JLabel sgpaLabel;
@@ -531,7 +532,6 @@ public class SemesterGradeCardGenerator extends JFrame {
                                 "B",
                                 "C+",
                                 "C",
-                                "D+",
                                 "D",
                                 "P",
                                 "F"
@@ -543,6 +543,17 @@ public class SemesterGradeCardGenerator extends JFrame {
                         "Add Subject",
                         BLUE
                 );
+                JButton editSubjectButton =
+        createButton(
+                "Edit Subject",
+                GREEN
+        );
+
+JButton deleteSubjectButton =
+        createButton(
+                "Delete Subject",
+                RED
+        );
 
         inputPanel.add(
                 createField(
@@ -590,9 +601,13 @@ public class SemesterGradeCardGenerator extends JFrame {
                 gradePanel
         );
 
-        inputPanel.add(
-                addSubjectButton
-        );
+       JPanel buttonPanel = new JPanel(new GridLayout(3,1,5,5));
+
+buttonPanel.add(addSubjectButton);
+buttonPanel.add(editSubjectButton);
+buttonPanel.add(deleteSubjectButton);
+
+inputPanel.add(buttonPanel);
 
         panel.add(
                 inputPanel,
@@ -644,13 +659,19 @@ public class SemesterGradeCardGenerator extends JFrame {
                 BorderLayout.CENTER
         );
 
-        addSubjectButton
-                .addActionListener(
-                        e ->
-                                addSubject()
-                );
+        addSubjectButton.addActionListener(
+                e -> addSubject()
+        );
 
-        return panel;
+        editSubjectButton.addActionListener(
+                e -> editSubject()
+        );
+
+        deleteSubjectButton.addActionListener(
+                e -> deleteSubject()
+        );
+
+                return panel;
     }
 
     // =====================================================
@@ -1062,7 +1083,9 @@ for (Student student : students) {
             students.remove(
                     selectedStudent
             );
-
+DatabaseManager.deleteStudent(
+        selectedStudent.getRegisterNumber()
+);
             selectedStudent =
                     null;
 
@@ -1163,10 +1186,157 @@ for (Student student : students) {
 
         updateResults();
     }
+// =====================================================
+// DELETE SUBJECT
+// =====================================================
+private void deleteSubject() {
 
+    int row = subjectTable.getSelectedRow();
+
+    if (row == -1) {
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Please select a subject to delete."
+        );
+
+        return;
+    }
+
+    if (selectedStudent == null) {
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Please select a student first."
+        );
+
+        return;
+    }
+
+    if (selectedSemester == null) {
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Please load a semester first."
+        );
+
+        return;
+    }
+
+    int result =
+            JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to delete this subject?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION
+            );
+
+    if (result != JOptionPane.YES_OPTION) {
+        return;
+    }
+
+    // Get subject information BEFORE removing it
+    Subject subject =
+            selectedSemester
+                    .getSubjects()
+                    .get(row);
+
+    String subjectCode =
+            subject.getSubjectCode();
+
+    String semester =
+            semesterComboBox
+                    .getSelectedItem()
+                    .toString();
+
+    // =====================================================
+    // DELETE FROM DATABASE
+    // =====================================================
+
+    DatabaseManager.deleteSubject(
+            selectedStudent.getRegisterNumber(),
+            semester,
+            subjectCode
+    );
+
+    // =====================================================
+    // REMOVE FROM JAVA MEMORY
+    // =====================================================
+
+    selectedSemester
+            .getSubjects()
+            .remove(row);
+
+    // =====================================================
+    // REMOVE FROM TABLE
+    // =====================================================
+
+    tableModel.removeRow(row);
+
+    // =====================================================
+    // UPDATE SGPA / CGPA
+    // =====================================================
+
+    updateResults();
+
+    JOptionPane.showMessageDialog(
+            this,
+            "Subject deleted successfully."
+    );
+}
     // =====================================================
     // ADD SUBJECT
     // =====================================================
+
+    private void editSubject() {
+
+    int row = subjectTable.getSelectedRow();
+
+    if (row == -1) {
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Please select a subject to edit."
+        );
+
+        return;
+    }
+
+    subjectCodeField.setText(
+            tableModel.getValueAt(row, 0).toString()
+    );
+
+    subjectNameField.setText(
+            tableModel.getValueAt(row, 1).toString()
+    );
+System.out.println("COLUMN 2 (CREDITS) = " +
+        tableModel.getValueAt(row, 2));
+
+System.out.println("COLUMN 4 (GRADE POINT) = " +
+        tableModel.getValueAt(row, 4));
+    creditsField.setText(
+            tableModel.getValueAt(row, 2).toString()
+    );
+
+    gradeComboBox.setSelectedItem(
+            tableModel.getValueAt(row, 3).toString()
+    );
+
+    tableModel.removeRow(row);
+
+    if (selectedSemester != null &&
+            row < selectedSemester.getSubjects().size()) {
+
+        selectedSemester.getSubjects().remove(row);
+    }
+
+    updateResults();
+
+    JOptionPane.showMessageDialog(
+            this,
+            "Edit the values and click 'Add Subject' to save the changes."
+    );
+}
 
     private void addSubject() {
 
@@ -1245,12 +1415,20 @@ for (Student student : students) {
         }
 
         try {
+double creditsValue =
+        Double.parseDouble(
+                creditsText
+        );
 
-            int credits =
-                    Integer.parseInt(
-                            creditsText
-                    );
+if (creditsValue <= 0 || creditsValue != Math.floor(creditsValue)) {
 
+    throw new NumberFormatException();
+}
+
+int credits =
+        (int) creditsValue;
+        System.out.println("CREDITS ENTERED = " + creditsText);
+System.out.println("CREDITS SAVED = " + credits);
             if (
                     credits <= 0
             ) {
@@ -1273,23 +1451,34 @@ for (Student student : students) {
                             gradePoint
                     );
 
-            selectedSemester
-                    .addSubject(
-                            subject
-                    );
+        selectedSemester
+        .addSubject(
+                subject
+        );
 
-            tableModel.addRow(
-                    new Object[]{
-                            code,
-                            name,
-                            credits,
-                            grade,
-                            gradePoint
-                    }
-            );
+System.out.println("Calling insertSubject...");
 
-            updateResults();
+DatabaseManager.insertSubject(
+        selectedStudent.getRegisterNumber(),
+        (String) semesterComboBox.getSelectedItem(),
+        code,
+        name,
+        credits,
+        grade,
+        gradePoint
+);
 
+tableModel.addRow(
+        new Object[]{
+                code,
+                name,
+                credits,
+                grade,
+                gradePoint
+        }
+);
+
+updateResults();
             subjectCodeField.setText(
                     ""
             );
@@ -1373,20 +1562,65 @@ gradeComboBox.setSelectedIndex(0);
     // =====================================================
     // LOAD STUDENTS FROM DATABASE
     // =====================================================
+private void loadStudentsFromDatabase() {
 
-    private void loadStudentsFromDatabase() {
+    students.clear();
 
-        students.clear();
+    students.addAll(
+            DatabaseManager.getAllStudents()
+    );
 
-        students.addAll(
-                DatabaseManager.getAllStudents()
-        );
+    // Load saved semesters and subjects for every student
+    for (Student student : students) {
 
-        JOptionPane.showMessageDialog(
-                this,
-                students.size() + " student(s) loaded from database."
-        );
+        for (int i = 1; i <= 8; i++) {
+
+            String semesterName =
+                    "Semester " + i;
+
+            List<Subject> savedSubjects =
+                    DatabaseManager.getSubjects(
+                            student.getRegisterNumber(),
+                            semesterName
+                    );
+
+            // Only create the semester if
+            // there are saved subjects
+            if (!savedSubjects.isEmpty()) {
+
+                Semester semester =
+                        student.getSemester(
+                                semesterName
+                        );
+
+                if (semester == null) {
+
+                    semester =
+                            new Semester(
+                                    semesterName
+                            );
+
+                    student.addSemester(
+                            semester
+                    );
+                }
+
+                for (Subject subject : savedSubjects) {
+
+                    semester.addSubject(
+                            subject
+                    );
+                }
+            }
+        }
     }
+
+    System.out.println(
+            students.size()
+                    +
+            " student(s) loaded from database."
+    );
+}
     // =====================================================
     // MAIN METHOD
     // =====================================================
@@ -1408,5 +1642,3 @@ gradeComboBox.setSelectedIndex(0);
         );
     }
 }
-
-
