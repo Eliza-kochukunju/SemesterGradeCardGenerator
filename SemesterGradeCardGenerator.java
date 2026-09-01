@@ -1,5 +1,9 @@
 
 import javax.swing.*;
+import java.awt.print.PageFormat;
+import java.awt.print.Printable;
+import java.awt.print.PrinterJob;
+import java.awt.print.PrinterException;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -702,6 +706,11 @@ inputPanel.add(buttonPanel);
                 new JLabel(
                         "CGPA: 0.00"
                 );
+                JButton viewGradeCardButton =
+        createButton(
+                "View Grade Card",
+                BLUE
+        );
 
         sgpaLabel.setForeground(
                 Color.WHITE
@@ -734,6 +743,12 @@ inputPanel.add(buttonPanel);
         panel.add(
                 cgpaLabel
         );
+        panel.add(
+        viewGradeCardButton
+);
+viewGradeCardButton.addActionListener(
+        e -> showGradeCard()
+);
 
         return panel;
     }
@@ -1502,7 +1517,484 @@ gradeComboBox.setSelectedIndex(0);
             );
         }
     }
+// =====================================================
+// SHOW GRADE CARD
+// =====================================================
 
+private void showGradeCard() {
+
+    if (selectedStudent == null) {
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Please select a student first."
+        );
+
+        return;
+    }
+
+    if (selectedSemester == null) {
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Please load a semester first."
+        );
+
+        return;
+    }
+    JFrame gradeCardFrame =
+        new JFrame(
+                "Semester Grade Card"
+        );
+
+gradeCardFrame.setSize(
+        900,
+        500
+);
+
+gradeCardFrame.setLocationRelativeTo(
+        this
+);
+
+gradeCardFrame.setLayout(
+        new BorderLayout()
+);
+JPanel header =
+        new JPanel(
+                new BorderLayout()
+        );
+
+header.setBackground(
+        NAVY
+);
+
+header.setBorder(
+        new EmptyBorder(
+                20,
+                25,
+                20,
+                25
+        )
+);
+
+JLabel title =
+        new JLabel(
+                "SEMESTER GRADE CARD",
+                SwingConstants.CENTER
+        );
+
+title.setForeground(
+        Color.WHITE
+);
+
+title.setFont(
+        new Font(
+                "Arial",
+                Font.BOLD,
+                26
+        )
+);
+
+header.add(
+        title,
+        BorderLayout.CENTER
+);
+
+gradeCardFrame.add(
+        header,
+        BorderLayout.NORTH
+);
+JPanel studentInfo =
+        new JPanel(
+                new GridLayout(
+                        2,
+                        3,
+                        15,
+                        10
+                )
+        );
+
+studentInfo.setBackground(
+        Color.WHITE
+);
+
+studentInfo.setBorder(
+        new EmptyBorder(
+                15,
+                20,
+                15,
+                20
+        )
+);
+
+studentInfo.add(
+        new JLabel(
+                "Student Name: "
+                +
+                selectedStudent.getName()
+        )
+);
+
+studentInfo.add(
+        new JLabel(
+                "Register Number: "
+                +
+                selectedStudent.getRegisterNumber()
+        )
+);
+
+studentInfo.add(
+        new JLabel(
+                "Department: "
+                +
+                selectedStudent.getDepartment()
+        )
+);
+
+studentInfo.add(
+        new JLabel(
+                "Academic Year: "
+                +
+                selectedStudent.getAcademicYear()
+        )
+);
+
+studentInfo.add(
+        new JLabel(
+                "Semester: "
+                +
+                semesterComboBox.getSelectedItem()
+        )
+);
+
+studentInfo.add(
+        new JLabel(
+                "Total Subjects: "
+                +
+                selectedSemester
+                        .getSubjects()
+                        .size()
+        )
+);
+JPanel tablePanel =
+        new JPanel(
+                new BorderLayout()
+        );
+
+tablePanel.setBackground(
+        Color.WHITE
+);
+
+String[] columnNames = {
+        "Subject Code",
+        "Subject Name",
+        "Credits",
+        "Grade",
+        "Grade Point"
+};
+
+DefaultTableModel gradeCardModel =
+        new DefaultTableModel(
+                columnNames,
+                0
+        ) {
+
+            @Override
+            public boolean isCellEditable(
+                    int row,
+                    int column
+            ) {
+                return false;
+            }
+        };
+
+for (
+        Subject subject :
+        selectedSemester.getSubjects()
+) {
+
+    gradeCardModel.addRow(
+            new Object[]{
+                    subject.getSubjectCode(),
+                    subject.getSubjectName(),
+                    subject.getCredits(),
+                    subject.getGrade(),
+                    subject.getGradePoint()
+            }
+    );
+}
+
+JTable gradeCardTable =
+        new JTable(
+                gradeCardModel
+        );
+
+gradeCardTable.setRowHeight(
+        28
+);
+
+gradeCardTable.getTableHeader()
+        .setFont(
+                new Font(
+                        "Arial",
+                        Font.BOLD,
+                        13
+                )
+        );
+
+JScrollPane gradeCardScrollPane =
+        new JScrollPane(
+                gradeCardTable
+        );
+
+tablePanel.add(
+        gradeCardScrollPane,
+        BorderLayout.CENTER
+);
+JPanel resultPanel =
+        new JPanel(
+                new FlowLayout(
+                        FlowLayout.CENTER,
+                        30,
+                        10
+                )
+        );
+
+resultPanel.setBackground(
+        NAVY
+);
+int totalCredits = 0;
+int earnedCredits = 0;
+
+for (
+        Subject subject :
+        selectedSemester.getSubjects()
+) {
+
+    totalCredits += subject.getCredits();
+
+    if (!subject.getGrade().equalsIgnoreCase("F")) {
+        earnedCredits += subject.getCredits();
+    }
+}double sgpa =
+        GradeCalculator.calculateSGPA(
+                selectedSemester
+        );
+
+double cgpa =
+        GradeCalculator.calculateCGPA(
+                selectedStudent
+        );
+        JLabel creditsLabel =
+        new JLabel(
+                "Total Credits: "
+                +
+                totalCredits
+        );
+
+JLabel earnedCreditsLabel =
+        new JLabel(
+                "Earned Credits: "
+                +
+                earnedCredits
+        );
+
+JLabel sgpaResultLabel =
+        new JLabel(
+                String.format(
+                        "SGPA: %.2f",
+                        sgpa
+                )
+        );
+
+JLabel cgpaResultLabel =
+        new JLabel(
+                String.format(
+                        "CGPA: %.2f",
+                        cgpa
+                )
+        );
+        creditsLabel.setForeground(
+        Color.WHITE
+);
+
+earnedCreditsLabel.setForeground(
+        Color.WHITE
+);
+
+sgpaResultLabel.setForeground(
+        Color.WHITE
+);
+
+cgpaResultLabel.setForeground(
+        Color.WHITE
+);
+resultPanel.add(
+        creditsLabel
+);
+
+resultPanel.add(
+        earnedCreditsLabel
+);
+
+resultPanel.add(
+        sgpaResultLabel
+);
+
+resultPanel.add(
+        cgpaResultLabel
+);
+JButton printButton =
+        createButton(
+                "Print Grade Card",
+                BLUE
+        );
+        JButton savePdfButton =
+        createButton(
+                "Save as PDF",
+                BLUE
+        );
+        resultPanel.add(
+        printButton
+);
+resultPanel.add(
+        savePdfButton
+);
+savePdfButton.addActionListener(
+        e -> printGradeCard(
+                gradeCardFrame
+        )
+);
+
+printButton.addActionListener(
+        e -> printGradeCard(
+                gradeCardFrame
+        )
+);
+gradeCardFrame.add(
+        header,
+        BorderLayout.NORTH
+);
+
+JPanel centerPanel =
+        new JPanel(
+                new BorderLayout()
+        );
+
+centerPanel.setBackground(
+        Color.WHITE
+);
+
+centerPanel.add(
+        studentInfo,
+        BorderLayout.NORTH
+);
+
+centerPanel.add(
+        tablePanel,
+        BorderLayout.CENTER
+);
+
+gradeCardFrame.add(
+        centerPanel,
+        BorderLayout.CENTER
+);
+
+gradeCardFrame.add(
+        resultPanel,
+        BorderLayout.SOUTH
+);
+gradeCardFrame.setVisible(
+        true
+);
+}
+
+// =====================================================
+// PRINT GRADE CARD
+// =====================================================
+
+private void printGradeCard(
+        JFrame gradeCardFrame
+) {
+
+    PrinterJob printerJob =
+            PrinterJob.getPrinterJob();
+
+    printerJob.setJobName(
+            "Semester Grade Card"
+    );
+
+    printerJob.setPrintable(
+            new Printable() {
+
+                @Override
+                public int print(
+                        Graphics graphics,
+                        PageFormat pageFormat,
+                        int pageIndex
+                ) {
+
+                    if (pageIndex > 0) {
+                        return NO_SUCH_PAGE;
+                    }
+
+                    Graphics2D g2 =
+                            (Graphics2D) graphics;
+
+                    double scaleX =
+                            pageFormat.getImageableWidth()
+                            /
+                            gradeCardFrame.getWidth();
+
+                    double scaleY =
+                            pageFormat.getImageableHeight()
+                            /
+                            gradeCardFrame.getHeight();
+
+                    double scale =
+                            Math.min(
+                                    scaleX,
+                                    scaleY
+                            );
+
+                    g2.translate(
+                            pageFormat.getImageableX(),
+                            pageFormat.getImageableY()
+                    );
+
+                    g2.scale(
+                            scale,
+                            scale
+                    );
+
+                    gradeCardFrame.paint(
+                            g2
+                    );
+
+                    return PAGE_EXISTS;
+                }
+            }
+    );
+
+    if (
+            printerJob.printDialog()
+    ) {
+
+        try {
+
+            printerJob.print();
+
+        } catch (PrinterException ex) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Printing failed.",
+                    "Print Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+}
     // =====================================================
     // UPDATE RESULTS
     // =====================================================
